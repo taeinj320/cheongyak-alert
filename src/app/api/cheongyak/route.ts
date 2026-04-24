@@ -37,7 +37,7 @@ function getMonthRange(month: string): { startDate: string; endDate: string } {
   const start = new Date(year, m - 1, 1);
   const end = new Date(year, m, 0);
   const format = (d: Date) =>
-    `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
       d.getDate()
     ).padStart(2, "0")}`;
   return { startDate: format(start), endDate: format(end) };
@@ -53,8 +53,9 @@ async function fetchOneApi(
   const url = new URL(endpoint);
   url.searchParams.set("serviceKey", serviceKey);
   url.searchParams.set("type", "json");
-  url.searchParams.set("numOfRows", "100");
-  url.searchParams.set("pageNo", "1");
+  // odcloud 청약 API는 page/perPage 형식을 안정적으로 처리합니다.
+  url.searchParams.set("page", "1");
+  url.searchParams.set("perPage", "100");
   url.searchParams.set("cond[SUBSCRPT_AREA_CODE_NM::EQ]", region);
   url.searchParams.set("cond[RCRIT_PBLANC_DE::GTE]", startDate);
   url.searchParams.set("cond[RCRIT_PBLANC_DE::LTE]", endDate);
