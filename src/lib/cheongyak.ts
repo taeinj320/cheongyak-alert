@@ -48,6 +48,21 @@ export function inferSupplyType(rawType: string): SupplyType {
   return "기타";
 }
 
+function inferSupplyTypeFromRaw(raw: Record<string, unknown>): SupplyType {
+  const detailedType = readString(raw, [
+    "HOUSE_DTL_SECD_NM",
+    "HOUSE_DTL_SECD",
+    "houseDetailType",
+  ]);
+  const simpleType = readString(raw, ["HOUSE_SECD_NM", "houseType", "주택구분"]);
+  const joined = `${detailedType} ${simpleType}`.trim();
+
+  // 코드값이 문자열로 내려오는 경우를 함께 처리합니다.
+  if (/\b03\b/.test(joined)) return "공공분양";
+  if (/\b01\b/.test(joined)) return "민간분양";
+  return inferSupplyType(joined);
+}
+
 export function inferHousingType(name: string): string {
   if (/오피스텔/.test(name)) return "오피스텔";
   if (/도시형/.test(name)) return "도시형생활주택";
@@ -106,8 +121,7 @@ export function normalizeCheongyakItem(
   const winnerDate = normalizeDate(
     readString(raw, ["PRZWNER_PRESNATN_DE", "winnerDate", "당첨자발표일"])
   );
-  const rawHouseType = readString(raw, ["HOUSE_SECD_NM", "houseType", "주택구분"]);
-  const supplyType = inferSupplyType(rawHouseType);
+  const supplyType = inferSupplyTypeFromRaw(raw);
 
   const item: CheongyakItem = {
     id:
