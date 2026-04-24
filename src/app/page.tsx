@@ -1,64 +1,284 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { BlogPost, CheongyakItem } from "@/lib/types";
+
+const REGIONS = [
+  "서울",
+  "경기",
+  "인천",
+  "부산",
+  "대구",
+  "광주",
+  "대전",
+  "울산",
+  "세종",
+  "강원",
+  "충북",
+  "충남",
+  "전북",
+  "전남",
+  "경북",
+  "경남",
+  "제주",
+];
+
+const SUPPLY_FILTERS = ["민간분양", "공공분양"];
+const HOUSING_FILTERS = [
+  "아파트",
+  "오피스텔",
+  "도시형생활주택",
+  "민간임대",
+  "생활숙박시설",
+];
+const STATUS_FILTERS = ["접수 예정", "접수 중", "접수 마감", "당첨자 발표"];
+
+type BlogMap = Record<string, BlogPost[]>;
+
+function monthLabel(value: string): string {
+  const [year, month] = value.split("-");
+  return `${year}년 ${month}월`;
+}
+
+function matchOrAll(selected: string[], value: string): boolean {
+  return selected.length === 0 || selected.includes(value);
+}
+
+function toggleValue(current: string[], value: string): string[] {
+  return current.includes(value)
+    ? current.filter((v) => v !== value)
+    : [...current, value];
+}
 
 export default function Home() {
+  const [region, setRegion] = useState("서울");
+  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [items, setItems] = useState<CheongyakItem[]>([]);
+  const [blogs, setBlogs] = useState<BlogMap>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [supplyFilters, setSupplyFilters] = useState<string[]>([]);
+  const [housingFilters, setHousingFilters] = useState<string[]>([]);
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const response = await fetch(
+          `/api/cheongyak?region=${encodeURIComponent(region)}&month=${encodeURIComponent(month)}`
+        );
+        const data = (await response.json()) as { items?: CheongyakItem[]; error?: string };
+        if (!response.ok) throw new Error(data.error || "청약 데이터 조회 실패");
+        setItems(data.items || []);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "조회 중 오류가 발생했습니다.";
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
+  }, [region, month]);
+
+  const filteredItems = useMemo(
+    () =>
+      items.filter((item) => {
+        const bySupply = matchOrAll(supplyFilters, item.supplyType);
+        const byHousing = matchOrAll(housingFilters, item.housingType);
+        const byStatus = matchOrAll(statusFilters, item.status);
+        return bySupply && byHousing && byStatus;
+      }),
+    [items, supplyFilters, housingFilters, statusFilters]
+  );
+
+  const loadBlogs = async (item: CheongyakItem) => {
+    if (blogs[item.id]) return;
+    const query = `${item.houseName} 청약정보`;
+    const response = await fetch(`/api/blog-search?query=${encodeURIComponent(query)}`);
+    const data = (await response.json()) as { items?: BlogPost[] };
+    setBlogs((prev) => ({ ...prev, [item.id]: data.items || [] }));
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <header className="mb-6">
+          <p className="text-sm font-semibold text-indigo-600">독립형 MVP</p>
+          <h1 className="text-2xl font-bold sm:text-3xl">청약 공고 알리미</h1>
+          <p className="mt-1 text-sm text-slate-600">
+            지역별 청약 공고를 조회하고 관련 블로그 상위 3개를 바로 확인할 수 있습니다.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+        </header>
+
+        <section className="mb-6 rounded-xl border bg-white p-4 shadow-sm">
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-semibold">지역</span>
+              <select
+                className="rounded-md border px-3 py-2"
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+              >
+                {REGIONS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-semibold">조회 월</span>
+              <input
+                className="rounded-md border px-3 py-2"
+                type="month"
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+              />
+            </label>
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-3">
+            <div>
+              <p className="mb-2 text-sm font-semibold">공급유형</p>
+              <div className="flex flex-wrap gap-3 text-sm">
+                {SUPPLY_FILTERS.map((value) => (
+                  <label key={value} className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={supplyFilters.includes(value)}
+                      onChange={() => setSupplyFilters((prev) => toggleValue(prev, value))}
+                    />
+                    {value}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm font-semibold">주거형태</p>
+              <div className="flex flex-wrap gap-3 text-sm">
+                {HOUSING_FILTERS.map((value) => (
+                  <label key={value} className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={housingFilters.includes(value)}
+                      onChange={() => setHousingFilters((prev) => toggleValue(prev, value))}
+                    />
+                    {value}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm font-semibold">청약상태</p>
+              <div className="flex flex-wrap gap-3 text-sm">
+                {STATUS_FILTERS.map((value) => (
+                  <label key={value} className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={statusFilters.includes(value)}
+                      onChange={() => setStatusFilters((prev) => toggleValue(prev, value))}
+                    />
+                    {value}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mb-3">
+          <p className="text-sm text-slate-600">
+            {monthLabel(month)} / {region} 검색 결과: {filteredItems.length}건
+          </p>
+        </section>
+
+        {loading && <p className="rounded-md bg-white p-4 text-sm">데이터를 불러오는 중입니다...</p>}
+        {error && <p className="rounded-md bg-red-50 p-4 text-sm text-red-700">{error}</p>}
+        {!loading && !error && filteredItems.length === 0 && (
+          <p className="rounded-md bg-white p-4 text-sm">조건에 맞는 공고가 없습니다.</p>
+        )}
+
+        <section className="grid gap-4 md:grid-cols-2">
+          {filteredItems.map((item) => {
+            const isOpen = expandedCardId === item.id;
+            const blogItems = blogs[item.id] || [];
+            return (
+              <article key={item.id} className="rounded-xl border bg-white p-4 shadow-sm">
+                <div className="mb-2 inline-block rounded-full bg-indigo-100 px-2 py-1 text-xs font-semibold text-indigo-700">
+                  {item.status}
+                </div>
+                <h2 className="text-lg font-bold">{item.houseName}</h2>
+                <p className="mt-1 text-sm text-slate-600">{item.address || item.region}</p>
+                <p className="mt-2 text-sm">공급유형: {item.supplyType}</p>
+                <p className="text-sm">주거형태: {item.housingType}</p>
+                <p className="text-sm">모집공고일: {item.noticeDate || "-"}</p>
+                <p className="text-sm">
+                  청약접수: {item.receiptStartDate || "-"} ~ {item.receiptEndDate || "-"}
+                </p>
+                <p className="text-sm">당첨자발표: {item.winnerDate || "-"}</p>
+                <p className="text-sm">총 공급세대수: {item.totalSupplyHouseholdCount || 0}세대</p>
+
+                <div className="mt-3 flex gap-2">
+                  <a
+                    className="rounded-md bg-slate-900 px-3 py-2 text-sm text-white"
+                    href={item.applyHomeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    청약홈 바로가기
+                  </a>
+                  <button
+                    className="rounded-md border px-3 py-2 text-sm"
+                    onClick={async () => {
+                      if (!isOpen) await loadBlogs(item);
+                      setExpandedCardId(isOpen ? null : item.id);
+                    }}
+                  >
+                    관련 블로그 {isOpen ? "닫기" : "보기"}
+                  </button>
+                </div>
+
+                {isOpen && (
+                  <div className="mt-4 border-t pt-3">
+                    <p className="mb-2 text-sm font-semibold">관련 블로그</p>
+                    {blogItems.length === 0 ? (
+                      <p className="text-sm text-slate-500">관련 글이 없습니다.</p>
+                    ) : (
+                      <ul className="space-y-2 text-sm">
+                        {blogItems.map((blog) => (
+                          <li key={blog.link}>
+                            <a
+                              className="font-medium text-indigo-700 hover:underline"
+                              href={blog.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {blog.title}
+                            </a>
+                            <p className="text-slate-500">
+                              {blog.bloggerName} · {blog.postDate}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </section>
+
+        <footer className="mt-8 rounded-lg border bg-white p-4 text-xs text-slate-500">
+          본 서비스는 공공데이터포털 및 네이버 검색 API 데이터를 기반으로 제공되며, 최종 확인은
+          청약홈 공식 사이트에서 진행해 주세요.
+        </footer>
       </main>
     </div>
   );
