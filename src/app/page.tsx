@@ -32,6 +32,20 @@ const HOUSING_FILTERS = [
   "생활숙박시설",
 ];
 const STATUS_FILTERS = ["접수 예정", "접수 중", "접수 마감", "당첨자 발표"];
+const AD_SLOTS = [
+  {
+    title: "광고 영역 A",
+    description: "지역 부동산/이사/인테리어 제휴 광고를 배치할 수 있습니다.",
+  },
+  {
+    title: "광고 영역 B",
+    description: "청약 관련 금융/상담 서비스 배너를 노출할 수 있습니다.",
+  },
+  {
+    title: "광고 영역 C",
+    description: "생활 편의/지역 혜택 서비스 광고를 노출할 수 있습니다.",
+  },
+];
 
 type BlogMap = Record<string, BlogPost[]>;
 
@@ -61,6 +75,12 @@ export default function Home() {
   const [housingFilters, setHousingFilters] = useState<string[]>([]);
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+
+  const clearFilters = () => {
+    setSupplyFilters([]);
+    setHousingFilters([]);
+    setStatusFilters([]);
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -105,12 +125,31 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        <header className="mb-6">
-          <p className="text-sm font-semibold text-indigo-600">독립형 MVP</p>
-          <h1 className="text-2xl font-bold sm:text-3xl">청약 공고 알리미</h1>
+        <header className="mb-6 rounded-xl border bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <p className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+              독립형 MVP
+            </p>
+            <p className="text-xs text-slate-500">배포 준비 상태</p>
+          </div>
+          <h1 className="mt-3 text-2xl font-bold sm:text-3xl">청약 공고 알리미</h1>
           <p className="mt-1 text-sm text-slate-600">
             지역별 청약 공고를 조회하고 관련 블로그 상위 3개를 바로 확인할 수 있습니다.
           </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border bg-slate-50 p-3">
+              <p className="text-xs text-slate-500">선택 지역</p>
+              <p className="text-base font-semibold">{region}</p>
+            </div>
+            <div className="rounded-lg border bg-slate-50 p-3">
+              <p className="text-xs text-slate-500">조회 월</p>
+              <p className="text-base font-semibold">{monthLabel(month)}</p>
+            </div>
+            <div className="rounded-lg border bg-slate-50 p-3">
+              <p className="text-xs text-slate-500">필터 적용 결과</p>
+              <p className="text-base font-semibold">{filteredItems.length}건</p>
+            </div>
+          </div>
         </header>
 
         <section className="mb-6 rounded-xl border bg-white p-4 shadow-sm">
@@ -190,6 +229,14 @@ export default function Home() {
               </div>
             </div>
           </div>
+          <div className="mt-4 flex justify-end">
+            <button
+              className="rounded-md border bg-slate-50 px-3 py-2 text-sm font-medium hover:bg-slate-100"
+              onClick={clearFilters}
+            >
+              필터 초기화
+            </button>
+          </div>
         </section>
 
         <section className="mb-3">
@@ -203,6 +250,22 @@ export default function Home() {
         {!loading && !error && filteredItems.length === 0 && (
           <p className="rounded-md bg-white p-4 text-sm">조건에 맞는 공고가 없습니다.</p>
         )}
+
+        <section className="mb-6 mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {AD_SLOTS.map((ad) => (
+            <article
+              key={ad.title}
+              className="rounded-xl border border-dashed border-slate-300 bg-white p-4 shadow-sm"
+            >
+              <p className="text-xs font-semibold text-slate-500">광고</p>
+              <h3 className="mt-1 text-base font-bold">{ad.title}</h3>
+              <p className="mt-1 text-sm text-slate-600">{ad.description}</p>
+              <button className="mt-3 rounded-md bg-slate-900 px-3 py-2 text-xs text-white">
+                광고 문의
+              </button>
+            </article>
+          ))}
+        </section>
 
         <section className="grid gap-4 md:grid-cols-2">
           {filteredItems.map((item) => {
@@ -276,8 +339,8 @@ export default function Home() {
         </section>
 
         <footer className="mt-8 rounded-lg border bg-white p-4 text-xs text-slate-500">
-          본 서비스는 공공데이터포털 및 네이버 검색 API 데이터를 기반으로 제공되며, 최종 확인은
-          청약홈 공식 사이트에서 진행해 주세요.
+          본 서비스는 공공데이터포털 및 네이버 검색 API 데이터를 기반으로 제공되며, 데이터 정확성과
+          최종 자격 판단은 청약홈 공식 사이트에서 반드시 재확인해 주시기 바랍니다.
         </footer>
       </main>
     </div>
