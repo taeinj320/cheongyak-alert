@@ -12,6 +12,17 @@ interface BenefitItem {
   link: string;
 }
 
+interface AdItem {
+  id: string;
+  title: string;
+  region: string;
+  category: string;
+  target: string;
+  description: string;
+  link: string;
+  cta: string;
+}
+
 const BENEFIT_DATA: BenefitItem[] = [
   {
     id: "benefit-1",
@@ -69,6 +80,39 @@ const BENEFIT_DATA: BenefitItem[] = [
   },
 ];
 
+const AD_ITEMS: AdItem[] = [
+  {
+    id: "ad-result-1",
+    title: "전세/월세 맞춤 상담 서비스",
+    region: "전국",
+    category: "주거",
+    target: "청년·신혼부부",
+    description: "조건에 맞는 전월세 매물을 분석해 드리는 무료 상담 이벤트를 진행 중입니다.",
+    link: "https://example.com/housing-consulting",
+    cta: "상담 신청",
+  },
+  {
+    id: "ad-banner-2",
+    title: "이사/청소 패키지 제휴 혜택",
+    region: "전국",
+    category: "생활",
+    target: "가정",
+    description: "입주 예정자를 위한 이사·청소·정리수납 패키지 할인 프로모션입니다.",
+    link: "https://example.com/move-clean-package",
+    cta: "혜택 보기",
+  },
+  {
+    id: "ad-banner-3",
+    title: "주택담보·전세대출 금리 비교",
+    region: "전국",
+    category: "금융",
+    target: "예비입주자",
+    description: "은행별 금리를 빠르게 비교하고 한도 조회를 도와드립니다.",
+    link: "https://example.com/loan-compare",
+    cta: "금리 확인",
+  },
+];
+
 const REGIONS = ["전체", "서울", "경기", "인천", "부산", "대구", "광주", "대전", "울산", "세종", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주", "전국"];
 const CATEGORIES = ["전체", "주거", "생활", "육아", "일자리"];
 
@@ -90,6 +134,23 @@ export default function Home() {
       return byRegion && byCategory && byKeyword;
     });
   }, [keyword, region, category]);
+
+  const mixedResults = useMemo(() => {
+    const sponsoredCard = AD_ITEMS[0];
+    if (!sponsoredCard) return filtered;
+    const mixed = [...filtered];
+    const insertIndex = Math.min(1, mixed.length);
+    mixed.splice(insertIndex, 0, {
+      id: sponsoredCard.id,
+      title: sponsoredCard.title,
+      region: sponsoredCard.region,
+      category: sponsoredCard.category,
+      target: sponsoredCard.target,
+      description: sponsoredCard.description,
+      link: sponsoredCard.link,
+    });
+    return mixed;
+  }, [filtered]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -148,8 +209,28 @@ export default function Home() {
 
         <section className="mb-3 text-sm text-slate-600">검색 결과: {filtered.length}건</section>
 
+        <section className="mb-4 grid gap-3 sm:grid-cols-2">
+          {AD_ITEMS.slice(1).map((ad) => (
+            <article key={ad.id} className="rounded-xl border bg-white p-4 shadow-sm">
+              <div className="mb-2 inline-flex rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">
+                추천
+              </div>
+              <h2 className="text-base font-bold">{ad.title}</h2>
+              <p className="mt-1 text-sm text-slate-600">{ad.description}</p>
+              <a
+                href={ad.link}
+                className="mt-3 inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm text-white"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {ad.cta}
+              </a>
+            </article>
+          ))}
+        </section>
+
         <section className="grid gap-4 md:grid-cols-2">
-          {filtered.map((item) => (
+          {mixedResults.map((item) => (
             <article key={item.id} className="rounded-xl border bg-white p-4 shadow-sm">
               <div className="mb-2 flex flex-wrap gap-2">
                 <span className="rounded-full bg-slate-100 px-2 py-1 text-xs">{item.region}</span>
@@ -162,6 +243,9 @@ export default function Home() {
               </div>
               <h2 className="text-lg font-bold">{item.title}</h2>
               <p className="mt-2 text-sm text-slate-600">{item.description}</p>
+              {item.id === AD_ITEMS[0]?.id && (
+                <p className="mt-2 text-xs text-slate-400">스폰서 콘텐츠</p>
+              )}
               <a
                 href={item.link}
                 className="mt-4 inline-flex rounded-md bg-slate-900 px-3 py-2 text-sm text-white"
